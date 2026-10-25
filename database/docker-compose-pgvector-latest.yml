@@ -1,0 +1,144 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg18
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-template_db_dev_password}
+      POSTGRES_DB: ${POSTGRES_DB:-template_db}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    networks:
+      - postgres_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: pgadmin
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -e
+        servers_json=/var/lib/pgadmin/servers.json
+        sed \
+          -e "s/__POSTGRES_USER__/${POSTGRES_USER:-admin}/g" \
+          -e "s/__POSTGRES_PASSWORD__/${POSTGRES_PASSWORD:-template_db_dev_password}/g" \
+          -e "s/__POSTGRES_DB__/${POSTGRES_DB:-template_db}/g" \
+          /pgadmin4/servers.json.template > "$$servers_json"
+        export PGADMIN_SERVER_JSON_FILE="$$servers_json"
+        exec /entrypoint.sh
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-template_db_dev_password}
+      POSTGRES_DB: ${POSTGRES_DB:-template_db}
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@admin.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-admin}
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+      PGADMIN_REPLACE_SERVERS_ON_STARTUP: "True"
+    ports:
+      - "${PGADMIN_PORT:-5050}:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+      - ./servers.json.template:/pgadmin4/servers.json.template:ro
+    networks:
+      - postgres_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # postgres-mcp:
+  #   image: crystaldba/postgres-mcp:latest
+  #   environment:
+  #     DATABASE_URI: postgresql://${POSTGRES_USER:-admin}:${POSTGRES_PASSWORD:-template_db_dev_password}@postgres:5432/${POSTGRES_DB:-template_db}
+  #   command:
+  #     - "--access-mode=unrestricted"
+  #     - "--transport=sse"
+  #   ports:
+  #     - "${POSTGRES_MCP_PORT:-8001}:8001"
+  #   networks:
+  #     - postgres_network
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #   restart: unless-stopped
+
+  # qdrant:
+  #   image: qdrant/qdrant:v1.17
+  #   environment:
+  #     QDRANT__SERVICE__API_KEY: ${QDRANT_API_KEY:-}
+  #   ports:
+  #     - "${QDRANT_PORT:-6333}:6333"
+  #   volumes:
+  #     - qdrant_data:/qdrant/storage
+  #   networks:
+  #     - postgres_network
+  #   restart: unless-stopped
+
+  # neo4j:
+  #   image: neo4j:5.26.2
+  #   environment:
+  #     NEO4J_AUTH: ${NEO4J_USER:-neo4j}/${NEO4J_PASSWORD:-password}
+  #     NEO4J_dbms_memory_pagecache_size: 1G
+  #   ports:
+  #     - "${NEO4J_HTTP_PORT:-7474}:7474" # HTTP
+  #     - "${NEO4J_BOLT_PORT:-7687}:7687" # Bolt
+  #   volumes:
+  #     - neo4j_data:/data
+  #   networks:
+  #     - postgres_network
+  #   restart: unless-stopped
+
+  # # # MinIO (S3-compatible storage). Optional for full offline dev.
+  # minio:
+  #   image: quay.io/minio/minio:latest
+  #   command: server /data --console-address ":9001"
+  #   ports:
+  #     - "${MINIO_API_PORT:-9000}:9000"
+  #     - "${MINIO_CONSOLE_PORT:-9001}:9001"
+  #   environment:
+  #     MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+  #     MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+  #   volumes:
+  #     - minio_data:/data
+  #   networks:
+  #     - postgres_network
+  #   restart: unless-stopped
+
+  # redis:
+  #   image: redis:8.2.4-alpine3.22
+  #   ports:
+  #     - "${REDIS_PORT:-6379}:6379"
+  #   networks:
+  #     - postgres_network
+  #   restart: unless-stopped
+
+  # redisinsight:
+  #   image: redis/redisinsight:latest
+  #   ports:
+  #     - "${REDISINSIGHT_PORT:-5540}:5540"
+  #   depends_on:
+  #     - redis
+  #   volumes:
+  #     - redisinsight_data:/data
+  #   networks:
+  #     - postgres_network
+  #   restart: unless-stopped
+
+volumes:
+  postgres_data:
+  pgadmin_data:
+  # qdrant_data:
+  # neo4j_data:
+  # minio_data:
+  # redisinsight_data:
+
+networks:
+  postgres_network:
+    driver: bridge
