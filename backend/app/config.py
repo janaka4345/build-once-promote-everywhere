@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     """Host-run API settings. DATABASE_URL is required; missing/empty fails fast."""
 
     model_config = SettingsConfigDict(
-        env_file=_ENV_FILE,
+        env_file=_ENV_FILE if _ENV_FILE.exists() else None,
         env_file_encoding="utf-8",
         extra="ignore",
     )

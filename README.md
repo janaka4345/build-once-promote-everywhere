@@ -13,6 +13,23 @@ Each article has a matching tag. Check out the state an article describes with:
 | Tag          | Article                                             |
 | ------------ | --------------------------------------------------- |
 | `article-00` | Part 0: What we're building and how to follow along |
+| `article-01` | Part 1.1: Why config belongs at runtime             |
+
+## Run locally
+
+Backend (terminal A):
+
+    cd backend
+    $env:APP_ENV = "development"
+    uv run fastapi dev main.py
+
+Frontend (terminal B):
+
+    cd frontend
+    pnpm install
+    pnpm dev
+
+Open http://localhost:5173.
 
 ## License
 

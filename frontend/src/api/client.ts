@@ -1,15 +1,26 @@
-import { env } from '#/env'
-
 import { ApiError, apiErrorFromResponse } from './errors'
 
-const baseUrl = () => env.VITE_API_URL.replace(/\/$/, '')
+export function getApiUrl(path: string): string {
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`
+  const apiPath = normalizedPath.startsWith('/api') ? normalizedPath : `/api${normalizedPath}`
+
+  // On the server during SSR (Node.js runtime), fetch requires an absolute URL
+  if (typeof window === 'undefined') {
+    const backendOrigin = process.env.BACKEND_URL || 'http://localhost:8000'
+    return `${backendOrigin.replace(/\/$/, '')}${apiPath}`
+  }
+
+  // In the browser, use relative same-origin URL
+  return apiPath
+}
 
 export async function apiFetch<T>(
   path: string,
   init: RequestInit | undefined,
   parseSuccess: (data: unknown) => T,
 ): Promise<T> {
-  const response = await fetch(`${baseUrl()}${path}`, {
+  const url = getApiUrl(path)
+  const response = await fetch(url, {
     ...init,
     headers: {
       Accept: 'application/json',
