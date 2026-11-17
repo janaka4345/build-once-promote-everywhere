@@ -5,7 +5,7 @@ from app.main import app
 
 
 def test_startup_fails_without_app_env(monkeypatch):
-    monkeypatch.delenv("APP_ENV", raising=False)
+    monkeypatch.setenv("APP_ENV", "")
 
     with pytest.raises(RuntimeError, match="APP_ENV"):
         with TestClient(app):

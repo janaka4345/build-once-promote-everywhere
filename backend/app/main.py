@@ -1,10 +1,9 @@
-import os
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.config import get_settings
+from app.config import Settings, get_settings
 from app.errors import register_exception_handlers
 from app.routers.tasks import router as tasks_router
 
@@ -13,7 +12,7 @@ get_settings()
 
 
 def read_app_env() -> str:
-    app_env = os.environ.get("APP_ENV", "").strip()
+    app_env = Settings().APP_ENV.strip()
     if not app_env:
         raise RuntimeError("APP_ENV must be set, for example APP_ENV=development")
     return app_env
@@ -22,7 +21,11 @@ def read_app_env() -> str:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     app.state.app_env = read_app_env()
-    yield
+    app.state.ready = True
+    try:
+        yield
+    finally:
+        app.state.ready = False
 
 
 # Local TanStack Start / Vite default from frontend/package.json (`vite dev --port 3000`).
@@ -41,6 +44,19 @@ app.add_middleware(
 register_exception_handlers(app)
 app.include_router(tasks_router, prefix="/api")
 app.include_router(tasks_router)
+
+
+@app.get("/healthz")
+def healthz():
+    return {"status": "ok"}
+
+
+@app.get("/readyz")
+def readyz(response: Response):
+    if not getattr(app.state, "ready", False):
+        response.status_code = 503
+        return {"status": "starting"}
+    return {"status": "ready"}
 
 
 @app.get("/api/env")

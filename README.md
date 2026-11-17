@@ -14,6 +14,7 @@ Each article has a matching tag. Check out the state an article describes with:
 | ------------ | --------------------------------------------------- |
 | `article-00` | Part 0: What we're building and how to follow along |
 | `article-01` | Part 1.1: Why config belongs at runtime             |
+| `article-02` | Part 1.2: Production-grade images and real health checks |
 
 ## Run locally
 
