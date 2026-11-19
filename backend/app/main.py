@@ -1,6 +1,8 @@
+import os
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Response
+import httpx
+from fastapi import FastAPI, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import Settings, get_settings
@@ -9,6 +11,8 @@ from app.routers.tasks import router as tasks_router
 
 # Fail fast at import if DATABASE_URL is missing or empty.
 get_settings()
+
+PRODUCTS_API_URL = os.getenv("PRODUCTS_API_URL", "https://dummyjson.com")
 
 
 def read_app_env() -> str:
@@ -61,5 +65,20 @@ def readyz(response: Response):
 
 @app.get("/api/env")
 def get_env():
-    return {"app_env": app.state.app_env}
+    return {
+        "app_env": app.state.app_env,
+        "message": os.getenv("APP_MESSAGE", ""),
+    }
+
+
+@app.get("/api/products/{product_id}")
+def get_product(product_id: int):
+    try:
+        response = httpx.get(f"{PRODUCTS_API_URL}/products/{product_id}", timeout=5.0)
+        response.raise_for_status()
+    except httpx.HTTPError as exc:
+        raise HTTPException(
+            status_code=502, detail="Product service unavailable"
+        ) from exc
+    return response.json()
 

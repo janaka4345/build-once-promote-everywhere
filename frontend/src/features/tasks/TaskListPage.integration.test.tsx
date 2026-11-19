@@ -123,5 +123,26 @@ describe('TaskListPage (integration)', () => {
     )
     expect(postCalls).toHaveLength(0)
   })
+
+  it('fetches and displays the featured product via /api/products/1', async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url === '/api/tasks') {
+        return new Response(JSON.stringify([]), { status: 200 })
+      }
+      if (url === '/api/products/1') {
+        return new Response(JSON.stringify({ id: 1, title: 'Phone' }), {
+          status: 200,
+        })
+      }
+      return new Response(null, { status: 404 })
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    renderWithQueryClient(<TaskListPage />)
+
+    expect(await screen.findByText('Featured product')).toBeInTheDocument()
+    expect(screen.getByText('1: Phone')).toBeInTheDocument()
+  })
 })
 

@@ -14,9 +14,10 @@ def test_startup_fails_without_app_env(monkeypatch):
 
 def test_startup_succeeds_with_app_env(monkeypatch):
     monkeypatch.setenv("APP_ENV", "staging")
+    monkeypatch.delenv("APP_MESSAGE", raising=False)
 
     with TestClient(app) as client:
         response = client.get("/api/env")
         assert response.status_code == 200
-        assert response.json() == {"app_env": "staging"}
+        assert response.json() == {"app_env": "staging", "message": ""}
 
