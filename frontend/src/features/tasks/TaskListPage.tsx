@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from '@tanstack/react-router'
 
 import type { Task, TaskStatus } from '#/api'
+import { getApiUrl } from '#/api/client'
 import {
   Card,
   CardContent,
@@ -22,6 +23,11 @@ import { CreateTaskForm } from './CreateTaskForm'
 import { useTasksQuery } from './hooks'
 
 type StatusFilter = 'all' | TaskStatus
+
+type Product = {
+  id: number
+  title: string
+}
 
 function TaskRow({ task }: { task: Task }) {
   return (
@@ -53,6 +59,25 @@ function filterTasksByStatus(
 export function TaskListPage() {
   const tasksQuery = useTasksQuery()
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
+  const [product, setProduct] = useState<Product | null>(null)
+
+  useEffect(() => {
+    let active = true
+    fetch(getApiUrl('/api/products/1'))
+      .then((res) => {
+        if (!res.ok) throw new Error(`Product request failed: ${res.status}`)
+        return res.json() as Promise<Product>
+      })
+      .then((data) => {
+        if (active) setProduct(data)
+      })
+      .catch(() => {
+        // Ignore optional featured product failures so task list stays usable.
+      })
+    return () => {
+      active = false
+    }
+  }, [])
 
   const visibleTasks = tasksQuery.data
     ? filterTasksByStatus(tasksQuery.data, statusFilter)
@@ -66,6 +91,17 @@ export function TaskListPage() {
           Create a Task and see the full list, newest first.
         </p>
       </header>
+
+      {product ? (
+        <section className="rounded-xl border border-border bg-card px-4 py-3 text-card-foreground">
+          <h2 className="text-sm font-semibold text-muted-foreground">
+            Featured product
+          </h2>
+          <p className="text-base font-medium">
+            {product.id}: {product.title}
+          </p>
+        </section>
+      ) : null}
 
       <Card>
         <CardHeader>

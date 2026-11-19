@@ -21,16 +21,18 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
   loader: async () => {
     const config = await loadConfig()
     let backendEnv = 'unknown'
+    let backendMessage = ''
     try {
       const res = await fetch(getApiUrl('/api/env'))
       if (res.ok) {
         const data = await res.json()
         backendEnv = data.app_env || 'unknown'
+        backendMessage = typeof data.message === 'string' ? data.message : ''
       }
     } catch {
       backendEnv = 'unavailable'
     }
-    return { config, backendEnv }
+    return { config, backendEnv, backendMessage }
   },
   errorComponent: ({ error }) => (
     <html lang="en">
@@ -90,6 +92,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
               Backend env:{' '}
               <strong className="text-foreground">
                 {data?.backendEnv ?? 'loading...'}
+                {data?.backendMessage ? ` - ${data.backendMessage}` : ''}
               </strong>
             </span>
           </div>

@@ -1,0 +1,43 @@
+name: build-once-promote-everywhere
+
+x-hardened: &hardened
+  read_only: true
+  tmpfs: [/tmp]
+  cap_drop: [ALL]
+  security_opt: ["no-new-privileges:true"]
+
+services:
+  frontend:
+    <<: *hardened
+    build: ./frontend
+    image: build-once-promote-everywhere/frontend:local
+    environment:
+      APP_ENV: local
+
+  backend:
+    <<: *hardened
+    build: ./backend
+    image: build-once-promote-everywhere/backend:local
+    environment:
+      APP_ENV: local
+      APP_MESSAGE: Hello from compose
+      PRODUCTS_API_URL: https://dummyjson.com
+      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://admin:template_db_dev_password@host.docker.internal:5432/template_db}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/readyz', timeout=2)"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+
+  edge:
+    <<: *hardened
+    image: nginxinc/nginx-unprivileged:alpine@sha256:b9241c6e7b8e9a862f129d8d4199ab64b10390949a78bdd5603379b32c844083
+    volumes:
+      - ./deploy/local/edge.conf:/etc/nginx/conf.d/default.conf:ro
+    ports: ["8080:8080"]
+    depends_on:
+      frontend:
+        condition: service_started
+      backend:
+        condition: service_healthy

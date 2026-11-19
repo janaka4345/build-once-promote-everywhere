@@ -19,6 +19,8 @@ class Settings(BaseSettings):
 
     DATABASE_URL: str
     APP_ENV: str = ""
+    APP_MESSAGE: str = ""
+    PRODUCTS_API_URL: str = "https://dummyjson.com"
 
     @field_validator("DATABASE_URL")
     @classmethod
